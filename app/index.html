@@ -1,0 +1,156 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>IosSni</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"/>
+    <link rel="stylesheet" href="/public/bootstrap-3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/public/css/style.css">-->
+    <script type="text/javascript" src="../public/jquery/jquery-3.1.1.min.js"></script>
+    <script type="text/javascript" src="/public/bootstrap-3.3.7/js/bootstrap.min.js"></script>
+
+    <script type="text/javascript" src="/public/api/rhoapi-modules.js"></script>
+    <script type="text/javascript" src="/public/api/rhoapi-modules-ORM.js"></script>
+    <script type="text/javascript" src="/public/api/rhoapi-modules-ORMHelper.js"></script>
+    <script type="text/javascript" src="/public/api/rhoapi-modules-Ruby-RunTime.js"></script>
+
+    <script type="text/javascript" src="index.js"></script>
+</head>
+
+<body>
+<div class="container-fluid">
+
+    <div class="row page-title">
+        <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+            
+        </div>
+        <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
+            <h3 class="text-center">IosSni</h3>
+        </div>
+        <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+            
+        </div>
+    </div>
+
+    <div id="alert" class="alert hidden">
+        <strong id="title"></strong>&nbsp;<span id="text"></span>
+    </div>
+
+    <div>
+    <input type="button" value="run" onclick="run();">
+    <input type="button" value="stop" onclick="stop();">
+    </div>
+
+    <div>
+    <textarea id="txt_urls" width="100%" rows="10"></textarea>
+    </div>
+
+    <div>
+    Results:
+    </div>
+
+    <div id='results'>
+    
+    </div>
+
+</div>
+
+<script>
+
+    var stopped=false;
+
+    var urls = [
+    /*
+		'https://expired.badssl.com/',
+		'https://wrong.host.badssl.com/',
+	*/
+        'https://badssl.com',
+    	'https://self-signed.badssl.com/',
+	/*
+    	'https://untrusted-root.badssl.com/',
+		'https://revoked.badssl.com/',
+		'https://incomplete-chain.badssl.com/',
+        */
+    ];
+
+    function populateTextarea() {
+        var s = '';
+
+        for ( i=0; i < urls.length; ++i ) {
+            s += urls[i] + '\n';
+        }
+
+        $('#txt_urls').val(s);
+
+    }
+
+    function populateUrls() {
+        urls = $('#txt_urls').val().trim().split('\n');
+    }
+
+    function addResult( ok, type, url, result ) {
+        var color = ok?"green":"red";
+        $('#results').append( 
+            $("<div style='color:" + color + "'>")
+            .append($('<div>').text(type)) 
+            .append($('<div>').text(url))
+            .append($('<div>').text(result))
+        ).append($('<br>'));
+    }
+
+    function run() {
+        i = -1;
+        $('#results').empty();
+        populateUrls();
+        netCallback(null);
+    }
+
+    function stop() {
+        stopped=true;
+    }
+
+    var i = -1;
+
+    function netCallback( result ) {
+
+        if (stopped) return;
+
+        stopped = false;
+
+        if ( i >= 0 ) {
+            var secure = ((i%2)==0);
+            var url = urls[Math.floor(i/2)];
+            addResult( 
+                result.status==='ok',
+                secure?"secure":"insecure",
+                url,
+                result.status + " " + result.error_code + " " + result.error_message
+            );
+        }
+
+        ++i;
+
+        if ( i < (urls.length*2) ) {
+            var u = urls[Math.floor(i/2)];
+            var secure = ((i%2)==0);
+            Rho.Network.get( {
+                url: u,
+                verifyPeerCertificate: secure
+            }, function(result) {
+                netCallback(result);
+            });
+        }
+    }
+
+    window.addEventListener("load", function () {
+        var page = new App.IndexPage();
+        page.init();
+
+        populateTextarea();
+    });
+</script>
+
+</body>
+
+</html>
